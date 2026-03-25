@@ -85,26 +85,35 @@ if app_mode == "影像后期":
 # --- 模式 B：AI 文生图 ---
 elif app_mode == "AI 文生图":
     hf_token = st.text_input("输入你的 Hugging Face Token (hf_...)", type="password")
-    prompt = st.text_area("描述你想要的画面 (提示：英文效果更好)", placeholder="e.g. A surreal landscape of floating islands, cinematic lighting, 8k...")
+    prompt = st.text_area("描述你想要的画面", placeholder="e.g. Cinematic noir photography...")
     
     if st.button("开始梦境生成"):
         if not hf_token:
-            st.warning("请先输入 Token。")
+            st.warning("请输入 Token。")
         else:
             with st.spinner("妮情 AI 正在构思..."):
                 result = query_ai_art(prompt, hf_token)
                 
-                if result == "loading":
-                    st.info("💡 云端模型正在苏醒，请 20 秒后再次点击生成按钮。")
-                elif isinstance(result, bytes):
+                # 🛡️ 增加防御逻辑：检查返回的数据到底是不是图片
+                try:
+                    # 尝试把返回的数据当做图片打开
                     generated_img = Image.open(io.BytesIO(result))
-                    # 💡 生成后自动套用“妮情”边框！
+                    
+                    # 如果成功打开，则套用边框
                     final_art = process_image(generated_img, "原色风格", add_border=True)
                     st.image(final_art, caption="妮情 AI 创意生成", use_container_width=True)
                     
-                    # 下载单张图
                     buf = io.BytesIO()
                     final_art.save(buf, format="JPEG")
-                    st.download_button("💾 保存这张 AI 作品", data=buf.getvalue(), file_name="NIQING_AI_ART.jpg")
-                else:
-                    st.error("生成失败，请检查 Token 或稍后再试。")
+                    st.download_button("💾 保存这张 AI 作品", data=buf.getvalue(), file_name="NIQING_AI.jpg")
+                
+                except Exception:
+                    # 如果打开失败，说明 result 里面是错误文本
+                    error_msg = result.decode("utf-8") if isinstance(result, bytes) else "未知错误"
+                    
+                    if "estimated_time" in error_msg:
+                        st.info("🕒 模型正在苏醒中... 请等待 30 秒后再点一次。")
+                    elif "Authorization" in error_msg:
+                        st.error("🔑 Token 无效，请检查是否输入正确。")
+                    else:
+                        st.error(f"❌ 抱歉，生成出错了：{error_msg}")
