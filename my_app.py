@@ -8,8 +8,6 @@ import requests
 import json
 
 # --- 💡 核心：使用 Hugging Face 最新的路由地址 ---
-# --- 💡 核心：使用 Hugging Face 最新的路由地址 ---
-API_URL = # --- 💡 这是 Hugging Face Router 的标准路径格式 ---
 API_URL = "https://router.huggingface.co/runwayml/stable-diffusion-v1-5"
 
 def query_ai_art(prompt, hf_token):
