@@ -5,17 +5,17 @@ import io
 import zipfile
 import requests
 
-# --- 1. 配置与视觉美化 (夏日海边：薄荷绿 + 海盐蓝 + 细沙白) ---
+# --- 1. 配置与视觉美化 (海盐蓝背景 + 薄荷绿侧边栏 + 椰沙棕卡片) ---
 st.set_page_config(page_title="妮情 · 仲夏海边工坊", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. 整体背景：极浅的海盐蓝 */
+    /* 1. 整体背景：极浅的海盐蓝 (保持清凉) */
     .stApp {
         background-color: #F0F8FF; 
     }
     
-    /* 2. 侧边栏：清凉的薄荷绿渐变 */
+    /* 2. 侧边栏：薄荷绿渐变 (保持不变) */
     [data-testid="stSidebar"] {
         background-image: linear-gradient(#B2FCF9, #72DEDC);
         color: #2F4F4F;
@@ -25,7 +25,7 @@ st.markdown("""
         font-weight: 600;
     }
 
-    /* 3. 标题：深海蓝，带一点清爽的阴影 */
+    /* 3. 标题：深海蓝 (保持不变) */
     h1 {
         color: #0077BE;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -33,7 +33,7 @@ st.markdown("""
         letter-spacing: 2px;
     }
 
-    /* 4. 按钮：治愈系的海蓝色 */
+    /* 4. 按钮：治愈系的海蓝色 (保持不变) */
     .stButton>button {
         background-color: #00A3AF;
         color: white;
@@ -45,17 +45,23 @@ st.markdown("""
     }
     .stButton>button:hover {
         background-color: #007780;
-        box-shadow: 0 6px 20px rgba(0, 163, 175, 0.4);
         transform: scale(1.02);
     }
 
-    /* 5. 卡片效果：纯净的细沙白 */
+    /* 5. 🛠️ 关键修改：卡片效果换成棕色细沙质感 */
     .stFileUploader, .stImage, .stTextArea {
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(10px); /* 磨砂玻璃效果 */
+        background-color: #EEDCBF; /* 柔和的椰沙棕 */
+        color: #3E2723; /* 深棕色文字，保护视力 */
         padding: 20px;
         border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        /* 深棕色边框，更有质感 */
+        border: 2px solid #D7CCC8; 
+        box-shadow: 0 8px 20px rgba(62, 39, 35, 0.1);
+    }
+    
+    /* 让输入框内的文字也变成深棕色 */
+    .stTextArea textarea {
+        color: #3E2723 !important;
     }
     </style>
     """, unsafe_allow_html=True)
