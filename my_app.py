@@ -5,35 +5,36 @@ import io
 import zipfile
 import requests
 
-# --- 1. 配置与视觉美化 (海盐蓝背景 + 薄荷绿侧边栏 + 椰沙棕卡片) ---
-st.set_page_config(page_title="妮情 · 仲夏海边工坊", layout="wide")
+# --- 1. 配置与视觉美化 (深海背景 + 椰沙棕卡片 + 薄荷绿侧边栏) ---
+st.set_page_config(page_title="妮情 · 深海创意工坊", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. 整体背景：极浅的海盐蓝 (保持清凉) */
+    /* 1. 整体背景：深邃的午夜海蓝色 */
     .stApp {
-        background-color: #F0F8FF; 
+        background-color: #0A192F; 
     }
     
-    /* 2. 侧边栏：薄荷绿渐变 (保持不变) */
+    /* 2. 侧边栏：依然保持薄荷绿，但在深色背景下会更亮眼 */
     [data-testid="stSidebar"] {
-        background-image: linear-gradient(#B2FCF9, #72DEDC);
-        color: #2F4F4F;
+        background-image: linear-gradient(#1B4D4B, #00A3AF);
+        color: #E0F2F1;
     }
     [data-testid="stSidebar"] .stMarkdown, [data-testid="stSidebar"] label {
-        color: #2F4F4F !important;
+        color: #E0F2F1 !important;
         font-weight: 600;
     }
 
-    /* 3. 标题：深海蓝 (保持不变) */
+    /* 3. 标题：极光青色，带一点发光效果 */
     h1 {
-        color: #0077BE;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #64FFDA;
+        font-family: 'Segoe UI', sans-serif;
         font-weight: 300;
-        letter-spacing: 2px;
+        letter-spacing: 3px;
+        text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
     }
 
-    /* 4. 按钮：治愈系的海蓝色 (保持不变) */
+    /* 4. 按钮：深海青色 */
     .stButton>button {
         background-color: #00A3AF;
         color: white;
@@ -41,27 +42,27 @@ st.markdown("""
         border: none;
         padding: 10px 30px;
         transition: all 0.4s ease;
-        box-shadow: 0 4px 12px rgba(0, 163, 175, 0.2);
     }
     .stButton>button:hover {
-        background-color: #007780;
-        transform: scale(1.02);
+        background-color: #64FFDA;
+        color: #0A192F;
+        transform: scale(1.05);
     }
 
-    /* 5. 🛠️ 关键修改：卡片效果换成棕色细沙质感 */
-    .stFileUploader, .stImage, .stTextArea {
-        background-color: #EEDCBF; /* 柔和的椰沙棕 */
-        color: #3E2723; /* 深棕色文字，保护视力 */
+    /* 5. 🛠️ 核心：棕色卡片在深色背景下的表现 */
+    .stFileUploader, .stImage, .stTextArea, .stAlert {
+        background-color: #3E2723; /* 深椰壳棕 */
+        color: #EEDCBF; /* 浅沙色文字，形成对比 */
         padding: 20px;
         border-radius: 20px;
-        /* 深棕色边框，更有质感 */
-        border: 2px solid #D7CCC8; 
-        box-shadow: 0 8px 20px rgba(62, 39, 35, 0.1);
+        border: 1px solid #5D4037; 
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
-    
-    /* 让输入框内的文字也变成深棕色 */
-    .stTextArea textarea {
-        color: #3E2723 !important;
+
+    /* 输入框内部文字颜色调整 */
+    textarea {
+        color: #EEDCBF !important;
+        background-color: #2D1B18 !important; /* 内部更深一点的棕色 */
     }
     </style>
     """, unsafe_allow_html=True)
