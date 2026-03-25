@@ -8,21 +8,37 @@ import requests
 import json
 
 # --- 💡 核心：使用 Hugging Face 最新的路由地址 ---
+# --- 💡 核心：使用 Hugging Face 最新的路由地址 ---
 API_URL = "https://router.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
 
 def query_ai_art(prompt, hf_token):
     headers = {"Authorization": f"Bearer {hf_token}"}
     payload = {"inputs": prompt}
     try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
-        # 如果返回的是图片，内容类型通常是 image/jpeg 或 image/png
+        # 增加超时处理，防止服务器长时间不响应
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+        
+        # 1. 如果服务器返回错误状态码 (如 503 加载中或 401 Token 错误)
+        if response.status_code != 200:
+            try:
+                return response.json()
+            except:
+                return {"error": f"服务器响应异常，状态码: {response.status_code}"}
+
+        # 2. 检查返回内容是否为空 (解决 Expecting value 报错的核心)
+        if not response.content:
+            return {"error": "服务器返回内容为空，模型可能正在初始化，请稍后重试。"}
+
+        # 3. 正常逻辑：判断是图片还是 JSON 报错
         if "image" in response.headers.get("Content-Type", ""):
             return response.content
         else:
-            # 否则返回的是 JSON 报错信息
             return response.json()
+            
+    except requests.exceptions.Timeout:
+        return {"error": "请求超时，云端模型加载较慢，请再试一次。"}
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"网络请求异常: {str(e)}"}
 
 # --- 核心美化函数 ---
 def process_image(img_obj, mode, add_border=True, ai_remove_bg=False):
@@ -82,35 +98,22 @@ if app_mode == "影像后期":
                 zip_file.writestr(f"NIQING_{idx}.jpg", img_byte.getvalue())
         st.download_button("📥 导出作品集", data=zip_buffer.getvalue(), file_name="NIQING_WORKS.zip")
 
-elif app_mode == "AI 文生图":
-    hf_token = st.text_input("输入你的 Hugging Face Token (hf_...)", type="password")
-    prompt = st.text_area("描述你想要的画面", placeholder="e.g. Cinematic noir photography, Tokyo street, rainy night, 85mm lens")
-    
-    if st.button("开始梦境生成"):
-        if not hf_token:
-            st.warning("🔑 请输入 Token。")
-        else:
-            with st.spinner("🕯️ 妮情 AI 正在从虚无中构思..."):
+with st.spinner("🕯️ 妮情 AI 正在从虚无中构思..."):
                 result = query_ai_art(prompt, hf_token)
                 
-                # 情况 1：返回的是图片字节流
+                # 情况 1：返回的是图片字节流 (成功)
                 if isinstance(result, bytes):
                     try:
                         generated_img = Image.open(io.BytesIO(result))
                         final_art = process_image(generated_img, "原色风格", add_border=True)
                         st.image(final_art, caption="妮情 AI 创意生成", use_container_width=True)
-                        
-                        buf = io.BytesIO()
-                        final_art.save(buf, format="JPEG")
-                        st.download_button("💾 保存这张 AI 作品", data=buf.getvalue(), file_name="NIQING_AI_ART.jpg")
+                        # ... 保存按钮代码 ...
                     except Exception as e:
                         st.error(f"❌ 图片解析失败: {e}")
                 
-                # 情况 2：返回的是字典（JSON 报错信息）
+                # 情况 2：返回的是字典 (报错信息)
                 elif isinstance(result, dict):
                     if "estimated_time" in result:
                         st.info(f"🕒 模型正在苏醒中... 预计还需 {int(result['estimated_time'])} 秒。请稍后重试。")
-                    elif "error" in result:
-                        st.error(f"❌ 服务器返回错误: {result['error']}")
                     else:
-                        st.write(result)
+                        st.error(f"❌ 提示: {result.get('error', '未知错误')}")
