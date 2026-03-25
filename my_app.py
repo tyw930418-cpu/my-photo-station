@@ -127,32 +127,26 @@ st.set_page_config(page_title="妮情 · 青春创意工坊", layout="wide")
 st.title("🍓 妮情 · 青春创意工坊 | NIQING CREATIVE")
 st.markdown("##### *用 AI 捕捉那一抹活跃的色彩*")
 
-# --- 模式 B：AI 文生图 ---
+# --- 模式 A：影像后期 (确保这一行在最左边) ---
+if app_mode == "影像后期":
+    mode = st.sidebar.selectbox("影调选择", ["原色风格", "自动增强", "徕卡黑白"])
+    ai_remove_bg = st.sidebar.toggle("启用 AI 自动抠图", value=False)
+    add_border = st.sidebar.toggle("启用妮情专属边框", value=True)
+    
+    uploaded_files = st.file_uploader("导入摄影素材", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+    if uploaded_files:
+        # 这里是处理上传图片的逻辑...
+        # (确保这里的代码比上面的 if 往右缩进 4 个空格)
+        st.write("正在处理中...") 
+
+# --- 模式 B：AI 文生图 (这一行必须和上面的 if app_mode 对齐) ---
 elif app_mode == "AI 文生图":
-    # 1. 先定义输入框 (让 Python 记住 prompt 这个变量)
-    hf_token = st.text_input("输入你的 Hugging Face Token (hf_...)", type="password")
+    hf_token = st.text_input("输入你的 Hugging Face Token", type="password")
+    prompt = st.text_area("描述你想要的画面")
     
-    # 这里的变量名必须叫 prompt
-    prompt = st.text_area("描述你想要的画面", placeholder="e.g. Cinematic noir photography, Tokyo street, 85mm lens")
-    
-    # 2. 点击按钮后才执行生成逻辑
     if st.button("开始梦境生成"):
-        if not hf_token:
-            st.warning("🔑 请输入 Token。")
-        elif not prompt: # 确保 prompt 已经输入
-            st.warning("📝 请输入提示词。")
-        else:
-            with st.spinner("🕯️ 妮情 AI 正在从虚无中构思..."):
-                # 这里引用 prompt 就不会报错了，因为它就在上面几行定义的
-                result = query_ai_art(prompt, hf_token)
-                
-                # --- 后续处理图片或报错的逻辑 (注意缩进) ---
-                if isinstance(result, bytes):
-                    try:
-                        generated_img = Image.open(io.BytesIO(result))
-                        # 自动套用妮情边框
-                        final_art = process_image(generated_img, "原色风格", add_border=True)
-                        st.image(final_art, caption="妮情 AI 创意生成", use_container_width=True)
+        # 这里是 AI 生成逻辑...
+        st.write("梦境构思中...")
                         
                         buf = io.BytesIO()
                         final_art.save(buf, format="JPEG")
