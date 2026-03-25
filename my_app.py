@@ -72,30 +72,60 @@ def process_image(img_obj, mode, add_border=True, ai_remove_bg=False):
     return img
 
 # --- UI 界面 ---
-st.set_page_config(page_title="妮情 AI 创意工坊", layout="wide")
-st.title("🕯️ 妮情摄影工坊 | NIQING STUDIO")
-
-st.sidebar.header("🎨 创作模式")
-app_mode = st.sidebar.radio("选择工作区", ["影像后期", "AI 文生图"])
-
-if app_mode == "影像后期":
-    mode = st.sidebar.selectbox("影调选择", ["原色风格", "自动增强", "徕卡黑白"])
-    ai_remove_bg = st.sidebar.toggle("启用 AI 自动抠图", value=False)
-    add_border = st.sidebar.toggle("启用妮情专属边框", value=True)
-    uploaded_files = st.file_uploader("导入摄影素材", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+import streamlit as st
+st.markdown("""
+    <style>
+    /* 1. 整体背景美化：浅奶油色背景 */
+    .stApp {
+        background-color: #FFF9F5;
+    }
     
-    if uploaded_files:
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zip_file:
-            cols = st.columns(3)
-            for idx, file in enumerate(uploaded_files):
-                processed_img = process_image(Image.open(file), mode, add_border, ai_remove_bg)
-                with cols[idx % 3]:
-                    st.image(processed_img, use_container_width=True)
-                img_byte = io.BytesIO()
-                processed_img.convert("RGB").save(img_byte, format='JPEG', quality=95)
-                zip_file.writestr(f"NIQING_{idx}.jpg", img_byte.getvalue())
-        st.download_button("📥 导出作品集", data=zip_buffer.getvalue(), file_name="NIQING_WORKS.zip")
+    /* 2. 侧边栏美化：落日橙渐变 */
+    [data-testid="stSidebar"] {
+        background-image: linear-gradient(#FF9E7D, #FF6B6B);
+        color: white;
+    }
+    [data-testid="stSidebar"] .stMarkdown, [data-testid="stSidebar"] label {
+        color: white !important;
+        font-weight: bold;
+    }
+
+    /* 3. 标题美化：青春活力的橙红字体 */
+    h1 {
+        color: #FF5E3A;
+        font-family: 'Helvetica Neue', sans-serif;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* 4. 按钮美化：圆角多巴胺色 */
+    .stButton>button {
+        background-color: #FF8E53;
+        color: white;
+        border-radius: 20px;
+        border: none;
+        padding: 10px 25px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(255, 142, 83, 0.3);
+    }
+    .stButton>button:hover {
+        background-color: #FF6B6B;
+        transform: translateY(-2px);
+    }
+
+    /* 5. 卡片效果：让上传区和图片预览更有质感 */
+    .stFileUploader, .stImage {
+        background: white;
+        padding: 15px;
+        border-radius: 15px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    }
+    </style>
+    """, unsafe_allow_stdio=True)
+
+# --- 页面标题更新 ---
+st.set_page_config(page_title="妮情 · 青春创意工坊", layout="wide")
+st.title("🍓 妮情 · 青春创意工坊 | NIQING CREATIVE")
+st.markdown("##### *用 AI 捕捉那一抹活跃的色彩*")
 
 # --- 模式 B：AI 文生图 ---
 elif app_mode == "AI 文生图":
