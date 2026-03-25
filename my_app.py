@@ -5,28 +5,28 @@ from rembg import remove
 import io
 import zipfile
 import requests
-import time
+import json
 
-# --- 💡 新增：Hugging Face 免费绘画函数 ---
-# --- 修改这一行 ---
+# --- 💡 核心：使用 Hugging Face 最新的路由地址 ---
 API_URL = "https://router.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
 
 def query_ai_art(prompt, hf_token):
     headers = {"Authorization": f"Bearer {hf_token}"}
     payload = {"inputs": prompt}
-    
-    response = requests.post(API_URL, headers=headers, json=payload)
-    
-    # 如果模型正在加载，需要重试
-    if response.status_code == 503:
-        return "loading"
-    return response.content
+    try:
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
+        # 如果返回的是图片，内容类型通常是 image/jpeg 或 image/png
+        if "image" in response.headers.get("Content-Type", ""):
+            return response.content
+        else:
+            # 否则返回的是 JSON 报错信息
+            return response.json()
+    except Exception as e:
+        return {"error": str(e)}
 
-# --- 核心美化函数 (复用之前的逻辑) ---
+# --- 核心美化函数 ---
 def process_image(img_obj, mode, add_border=True, ai_remove_bg=False):
-    # 这里的 img_obj 可以是上传的文件，也可以是 AI 生成的 PIL Image
     img = ImageOps.exif_transpose(img_obj)
-    
     if ai_remove_bg:
         img_byte = io.BytesIO()
         img.save(img_byte, format='PNG')
@@ -63,13 +63,12 @@ st.title("🕯️ 妮情摄影工坊 | NIQING STUDIO")
 st.sidebar.header("🎨 创作模式")
 app_mode = st.sidebar.radio("选择工作区", ["影像后期", "AI 文生图"])
 
-# --- 模式 A：影像后期 ---
 if app_mode == "影像后期":
     mode = st.sidebar.selectbox("影调选择", ["原色风格", "自动增强", "徕卡黑白"])
     ai_remove_bg = st.sidebar.toggle("启用 AI 自动抠图", value=False)
     add_border = st.sidebar.toggle("启用妮情专属边框", value=True)
-    
     uploaded_files = st.file_uploader("导入摄影素材", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+    
     if uploaded_files:
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zip_file:
@@ -83,44 +82,35 @@ if app_mode == "影像后期":
                 zip_file.writestr(f"NIQING_{idx}.jpg", img_byte.getvalue())
         st.download_button("📥 导出作品集", data=zip_buffer.getvalue(), file_name="NIQING_WORKS.zip")
 
-# --- 模式 B：AI 文生图 ---
-# --- 修改后的 AI 文生图逻辑块 ---
 elif app_mode == "AI 文生图":
     hf_token = st.text_input("输入你的 Hugging Face Token (hf_...)", type="password")
-    prompt = st.text_area("描述你想要的画面", placeholder="e.g. Cinematic noir photography...")
+    prompt = st.text_area("描述你想要的画面", placeholder="e.g. Cinematic noir photography, Tokyo street, rainy night, 85mm lens")
     
     if st.button("开始梦境生成"):
         if not hf_token:
-            st.warning("🔑 请先输入 Hugging Face Token。")
-        elif not prompt:
-            st.warning("📝 请输入提示词。")
+            st.warning("🔑 请输入 Token。")
         else:
-            with st.spinner("🕯️ 妮情 AI 正在构思梦境..."):
+            with st.spinner("🕯️ 妮情 AI 正在从虚无中构思..."):
                 result = query_ai_art(prompt, hf_token)
                 
-                # --- 🛠️ 质检员逻辑：检查返回内容 ---
-                try:
-                    # 尝试读取图片
-                    generated_img = Image.open(io.BytesIO(result))
-                    
-                    # 如果成功读取，则继续处理并显示
-                    final_art = process_image(generated_img, "原色风格", add_border=True)
-                    st.image(final_art, caption="妮情 AI 创意生成", use_container_width=True)
-                    
-                    # 下载按钮
-                    buf = io.BytesIO()
-                    final_art.convert("RGB").save(buf, format="JPEG", quality=95)
-                    st.download_button("💾 保存这张 AI 作品", data=buf.getvalue(), file_name="NIQING_AI_ART.jpg")
-                
-                except Exception:
-                    # 如果失败，说明 result 是报错文本
+                # 情况 1：返回的是图片字节流
+                if isinstance(result, bytes):
                     try:
-                        error_info = result.decode("utf-8")
-                        if "estimated_time" in error_info:
-                            st.info("🕒 **模型正在苏醒中...** 云端服务器正在加载 AI 模型，请在 20 秒后再次点击生成按钮。")
-                        elif "Authorization" in error_info:
-                            st.error("❌ **Token 无效**：请检查你的 Hugging Face Token 是否正确。")
-                        else:
-                            st.error(f"❌ **服务器返回错误**：{error_info}")
-                    except:
-                        st.error("❌ **未知错误**：请检查网络或 Token 权限。")
+                        generated_img = Image.open(io.BytesIO(result))
+                        final_art = process_image(generated_img, "原色风格", add_border=True)
+                        st.image(final_art, caption="妮情 AI 创意生成", use_container_width=True)
+                        
+                        buf = io.BytesIO()
+                        final_art.save(buf, format="JPEG")
+                        st.download_button("💾 保存这张 AI 作品", data=buf.getvalue(), file_name="NIQING_AI_ART.jpg")
+                    except Exception as e:
+                        st.error(f"❌ 图片解析失败: {e}")
+                
+                # 情况 2：返回的是字典（JSON 报错信息）
+                elif isinstance(result, dict):
+                    if "estimated_time" in result:
+                        st.info(f"🕒 模型正在苏醒中... 预计还需 {int(result['estimated_time'])} 秒。请稍后重试。")
+                    elif "error" in result:
+                        st.error(f"❌ 服务器返回错误: {result['error']}")
+                    else:
+                        st.write(result)
