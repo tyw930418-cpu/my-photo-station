@@ -8,7 +8,8 @@ import requests
 import time
 
 # --- 💡 新增：Hugging Face 免费绘画函数 ---
-API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
+# --- 修改这一行 ---
+API_URL = "https://router.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
 
 def query_ai_art(prompt, hf_token):
     headers = {"Authorization": f"Bearer {hf_token}"}
