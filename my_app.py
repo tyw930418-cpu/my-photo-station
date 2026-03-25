@@ -98,20 +98,39 @@ if app_mode == "影像后期":
                 zip_file.writestr(f"NIQING_{idx}.jpg", img_byte.getvalue())
         st.download_button("📥 导出作品集", data=zip_buffer.getvalue(), file_name="NIQING_WORKS.zip")
 
-with st.spinner("🕯️ 妮情 AI 正在从虚无中构思..."):
+# --- 模式 B：AI 文生图 ---
+elif app_mode == "AI 文生图":
+    # 1. 先定义输入框 (让 Python 记住 prompt 这个变量)
+    hf_token = st.text_input("输入你的 Hugging Face Token (hf_...)", type="password")
+    
+    # 这里的变量名必须叫 prompt
+    prompt = st.text_area("描述你想要的画面", placeholder="e.g. Cinematic noir photography, Tokyo street, 85mm lens")
+    
+    # 2. 点击按钮后才执行生成逻辑
+    if st.button("开始梦境生成"):
+        if not hf_token:
+            st.warning("🔑 请输入 Token。")
+        elif not prompt: # 确保 prompt 已经输入
+            st.warning("📝 请输入提示词。")
+        else:
+            with st.spinner("🕯️ 妮情 AI 正在从虚无中构思..."):
+                # 这里引用 prompt 就不会报错了，因为它就在上面几行定义的
                 result = query_ai_art(prompt, hf_token)
                 
-                # 情况 1：返回的是图片字节流 (成功)
+                # --- 后续处理图片或报错的逻辑 (注意缩进) ---
                 if isinstance(result, bytes):
                     try:
                         generated_img = Image.open(io.BytesIO(result))
+                        # 自动套用妮情边框
                         final_art = process_image(generated_img, "原色风格", add_border=True)
                         st.image(final_art, caption="妮情 AI 创意生成", use_container_width=True)
-                        # ... 保存按钮代码 ...
+                        
+                        buf = io.BytesIO()
+                        final_art.save(buf, format="JPEG")
+                        st.download_button("💾 保存这张 AI 作品", data=buf.getvalue(), file_name="NIQING_AI_ART.jpg")
                     except Exception as e:
                         st.error(f"❌ 图片解析失败: {e}")
                 
-                # 情况 2：返回的是字典 (报错信息)
                 elif isinstance(result, dict):
                     if "estimated_time" in result:
                         st.info(f"🕒 模型正在苏醒中... 预计还需 {int(result['estimated_time'])} 秒。请稍后重试。")
