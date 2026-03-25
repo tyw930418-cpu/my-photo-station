@@ -83,37 +83,43 @@ if app_mode == "影像后期":
         st.download_button("📥 导出作品集", data=zip_buffer.getvalue(), file_name="NIQING_WORKS.zip")
 
 # --- 模式 B：AI 文生图 ---
+# --- 修改后的 AI 文生图逻辑块 ---
 elif app_mode == "AI 文生图":
     hf_token = st.text_input("输入你的 Hugging Face Token (hf_...)", type="password")
     prompt = st.text_area("描述你想要的画面", placeholder="e.g. Cinematic noir photography...")
     
     if st.button("开始梦境生成"):
         if not hf_token:
-            st.warning("请输入 Token。")
+            st.warning("🔑 请先输入 Hugging Face Token。")
+        elif not prompt:
+            st.warning("📝 请输入提示词。")
         else:
-            with st.spinner("妮情 AI 正在构思..."):
+            with st.spinner("🕯️ 妮情 AI 正在构思梦境..."):
                 result = query_ai_art(prompt, hf_token)
                 
-                # 🛡️ 增加防御逻辑：检查返回的数据到底是不是图片
+                # --- 🛠️ 质检员逻辑：检查返回内容 ---
                 try:
-                    # 尝试把返回的数据当做图片打开
+                    # 尝试读取图片
                     generated_img = Image.open(io.BytesIO(result))
                     
-                    # 如果成功打开，则套用边框
+                    # 如果成功读取，则继续处理并显示
                     final_art = process_image(generated_img, "原色风格", add_border=True)
                     st.image(final_art, caption="妮情 AI 创意生成", use_container_width=True)
                     
+                    # 下载按钮
                     buf = io.BytesIO()
-                    final_art.save(buf, format="JPEG")
-                    st.download_button("💾 保存这张 AI 作品", data=buf.getvalue(), file_name="NIQING_AI.jpg")
+                    final_art.convert("RGB").save(buf, format="JPEG", quality=95)
+                    st.download_button("💾 保存这张 AI 作品", data=buf.getvalue(), file_name="NIQING_AI_ART.jpg")
                 
                 except Exception:
-                    # 如果打开失败，说明 result 里面是错误文本
-                    error_msg = result.decode("utf-8") if isinstance(result, bytes) else "未知错误"
-                    
-                    if "estimated_time" in error_msg:
-                        st.info("🕒 模型正在苏醒中... 请等待 30 秒后再点一次。")
-                    elif "Authorization" in error_msg:
-                        st.error("🔑 Token 无效，请检查是否输入正确。")
-                    else:
-                        st.error(f"❌ 抱歉，生成出错了：{error_msg}")
+                    # 如果失败，说明 result 是报错文本
+                    try:
+                        error_info = result.decode("utf-8")
+                        if "estimated_time" in error_info:
+                            st.info("🕒 **模型正在苏醒中...** 云端服务器正在加载 AI 模型，请在 20 秒后再次点击生成按钮。")
+                        elif "Authorization" in error_info:
+                            st.error("❌ **Token 无效**：请检查你的 Hugging Face Token 是否正确。")
+                        else:
+                            st.error(f"❌ **服务器返回错误**：{error_info}")
+                    except:
+                        st.error("❌ **未知错误**：请检查网络或 Token 权限。")
