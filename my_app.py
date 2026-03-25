@@ -5,35 +5,62 @@ import io
 import zipfile
 import requests
 
-# --- 1. 配置与视觉美化 (落日橙 + 奶油白) ---
-st.set_page_config(page_title="妮情 · 青春创意工坊", layout="wide")
+# --- 1. 配置与视觉美化 (夏日海边：薄荷绿 + 海盐蓝 + 细沙白) ---
+st.set_page_config(page_title="妮情 · 仲夏海边工坊", layout="wide")
 
 st.markdown("""
     <style>
-    .stApp { background-color: #FFF9F5; }
+    /* 1. 整体背景：极浅的海盐蓝 */
+    .stApp {
+        background-color: #F0F8FF; 
+    }
+    
+    /* 2. 侧边栏：清凉的薄荷绿渐变 */
     [data-testid="stSidebar"] {
-        background-image: linear-gradient(#FF9E7D, #FF6B6B);
-        color: white;
+        background-image: linear-gradient(#B2FCF9, #72DEDC);
+        color: #2F4F4F;
     }
     [data-testid="stSidebar"] .stMarkdown, [data-testid="stSidebar"] label {
-        color: white !important; font-weight: bold;
+        color: #2F4F4F !important;
+        font-weight: 600;
     }
-    h1 { color: #FF5E3A; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
+
+    /* 3. 标题：深海蓝，带一点清爽的阴影 */
+    h1 {
+        color: #0077BE;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 300;
+        letter-spacing: 2px;
+    }
+
+    /* 4. 按钮：治愈系的海蓝色 */
     .stButton>button {
-        background-color: #FF8E53; color: white; border-radius: 20px;
-        border: none; padding: 10px 25px; transition: all 0.3s;
-        box-shadow: 0 4px 15px rgba(255, 142, 83, 0.3);
+        background-color: #00A3AF;
+        color: white;
+        border-radius: 25px;
+        border: none;
+        padding: 10px 30px;
+        transition: all 0.4s ease;
+        box-shadow: 0 4px 12px rgba(0, 163, 175, 0.2);
     }
-    .stButton>button:hover { background-color: #FF6B6B; transform: translateY(-2px); }
-    .stFileUploader, .stImage {
-        background: white; padding: 15px; border-radius: 15px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    .stButton>button:hover {
+        background-color: #007780;
+        box-shadow: 0 6px 20px rgba(0, 163, 175, 0.4);
+        transform: scale(1.02);
+    }
+
+    /* 5. 卡片效果：纯净的细沙白 */
+    .stFileUploader, .stImage, .stTextArea {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px); /* 磨砂玻璃效果 */
+        padding: 20px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. 核心：AI 请求函数 (使用最新 Router 路径) ---
-# 选用了更稳定的 OpenJourney 模型，非常有摄影质感
+# --- 2. 核心：AI 请求函数 (保持不变，已为你优化路径) ---
 API_URL = "https://router.huggingface.co/prompthero/openjourney"
 
 def query_ai_art(prompt, hf_token):
@@ -44,16 +71,12 @@ def query_ai_art(prompt, hf_token):
         if response.status_code != 200:
             try: return response.json()
             except: return {"error": f"码: {response.status_code}"}
-        if not response.content:
-            return {"error": "返回为空，请重试"}
-        if "image" in response.headers.get("Content-Type", ""):
-            return response.content
-        else:
-            return response.json()
-    except Exception as e:
-        return {"error": str(e)}
+        if not response.content: return {"error": "返回为空"}
+        if "image" in response.headers.get("Content-Type", ""): return response.content
+        else: return response.json()
+    except Exception as e: return {"error": str(e)}
 
-# --- 3. 核心：图片处理函数 (带妮情边框) ---
+# --- 3. 核心：图片处理函数 (保持不变) ---
 def process_image(img_obj, mode, add_border=True, ai_remove_bg=False):
     img = ImageOps.exif_transpose(img_obj)
     if ai_remove_bg:
@@ -61,32 +84,27 @@ def process_image(img_obj, mode, add_border=True, ai_remove_bg=False):
         img.save(img_byte, format='PNG')
         out_data = remove(img_byte.getvalue())
         img = Image.open(io.BytesIO(out_data)).convert("RGBA")
-
     if mode == "徕卡黑白":
         if img.mode == 'RGBA':
             r, g, b, a = img.split()
             gray = ImageOps.grayscale(Image.merge("RGB", (r, g, b)))
             img = Image.merge("RGBA", (gray, gray, gray, a))
-        else:
-            img = img.convert("L")
+        else: img = img.convert("L")
         img = ImageEnhance.Contrast(img).enhance(1.4)
-    
     if add_border:
         w, h = img.size
         brand_tag = "N I Q I N G   S T U D I O"
         border_h = int(h * 0.20)
         new_img = Image.new("RGB", (w, h + border_h), (255, 255, 255))
-        if img.mode == 'RGBA':
-            new_img.paste(img, (0, 0), mask=img.split()[3])
-        else:
-            new_img.paste(img, (0, 0))
+        if img.mode == 'RGBA': new_img.paste(img, (0, 0), mask=img.split()[3])
+        else: new_img.paste(img, (0, 0))
         draw = ImageDraw.Draw(new_img)
         draw.text((int(w*0.05), h + int(border_h*0.3)), brand_tag, fill=(0, 0, 0))
         img = new_img
     return img
 
-# --- 4. UI 逻辑主体 ---
-st.title("🍓 妮情 · 青春创意工坊 | NIQING")
+# --- 4. UI 逻辑主体 (保持不变) ---
+st.title("🏖️ 妮情 · 仲夏海边工坊 | NIQING")
 st.sidebar.markdown("### 🎨 创作模式")
 app_mode = st.sidebar.radio("请选择操作", ["影像后期", "AI 文生图"])
 
