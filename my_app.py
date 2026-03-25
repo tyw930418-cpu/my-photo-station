@@ -78,6 +78,7 @@ add_border = st.sidebar.toggle("启用妮情专属边框", value=True)
 # 文件上传
 uploaded_files = st.file_uploader("导入摄影素材", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
+# --- 这里的缩进必须完全对齐 ---
 if uploaded_files:
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zip_file:
@@ -100,8 +101,12 @@ if uploaded_files:
 
     st.divider()
     st.balloons()
-    st.download_button("📥 导出妮情 AI 作品集", data=zip_buffer.getvalue(), file_name="NIQING_STUDIO_WORKS.zip")
+    st.download_button(
+        label="📥 导出妮情 AI 作品集", 
+        data=zip_buffer.getvalue(), 
+        file_name="NIQING_STUDIO_WORKS.zip"
+    )
+
+# 👈 注意这个 else 必须和上面的 if uploaded_files 对齐
 else:
     st.info("👋 你好，妮情。请在此导入你的影像，开启基于 AI 的艺术化后期流程。")
-else:
-    st.info("👋 你好 wutianlong！请在左侧侧边栏上传照片。建议开启‘拍立得边框’。")
