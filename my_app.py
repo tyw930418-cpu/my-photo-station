@@ -9,7 +9,7 @@ import json
 
 # --- 💡 核心：使用 Hugging Face 最新的路由地址 ---
 # --- 💡 核心：使用 Hugging Face 最新的路由地址 ---
-API_URL = "https://router.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
+API_URL = "https://runwayml/stable-diffusion-v1-5"
 
 def query_ai_art(prompt, hf_token):
     headers = {"Authorization": f"Bearer {hf_token}"}
