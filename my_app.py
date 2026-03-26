@@ -38,7 +38,7 @@ st.markdown("""
 
 # 模型地址
 TEXT_MODEL = "https://router.huggingface.co/prompthero/openjourney"
-IMAGE_MODEL = "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
+IMAGE_MODEL = "https://router.huggingface.co/runwayml/stable-diffusion-v1-5"
 
 def translate_to_en(text):
     url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&q={requests.utils.quote(text)}"
