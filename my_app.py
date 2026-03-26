@@ -5,7 +5,7 @@ import io
 import zipfile
 import requests
 
-# --- 1. 配置与视觉美化 (深海背景 + 椰沙棕卡片 + 薄荷绿侧边栏) ---
+# --- 1. 配置与视觉美化 (深海蓝背景 + 椰沙棕卡片) ---
 st.set_page_config(page_title="妮情 · 深海创意工坊", layout="wide")
 
 st.markdown("""
@@ -40,7 +40,7 @@ st.markdown("""
 
 API_URL = "https://router.huggingface.co/prompthero/openjourney"
 
-# ✨ 翻译官函数
+# ✨ 翻译官函数 (中文 -> 英文)
 def translate_to_en(text):
     url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&q={requests.utils.quote(text)}"
     try:
@@ -49,7 +49,7 @@ def translate_to_en(text):
     except:
         return text
 
-# 🚀 刚才丢失的 AI 请求引擎 (补回来了！)
+# 🚀 AI 请求引擎
 def query_ai_art(prompt, hf_token):
     headers = {"Authorization": f"Bearer {hf_token}"}
     payload = {"inputs": prompt}
@@ -63,7 +63,7 @@ def query_ai_art(prompt, hf_token):
         else: return response.json()
     except Exception as e: return {"error": str(e)}
 
-# 🖼️ 图片处理函数
+# 🖼️ 图片处理函数 (带妮情边框)
 def process_image(img_obj, mode, add_border=True, ai_remove_bg=False):
     img = ImageOps.exif_transpose(img_obj)
     if ai_remove_bg:
@@ -118,17 +118,26 @@ if app_mode == "影像后期":
         st.download_button("📥 批量导出作品", data=zip_buf.getvalue(), file_name="NIQING_WORKS.zip")
 
 elif app_mode == "AI 文生图":
-    token = st.sidebar.text_input("Hugging Face Token", type="password")
-    prompt = st.text_area("描述你的梦境 (支持中文)", placeholder="例如：深海中的发光少女...")
+    # ✨ 核心修改：Token 免输入逻辑
+    try:
+        # 尝试从 Secrets 读取
+        token = st.secrets["HF_TOKEN"]
+    except:
+        # 如果没设置，依然保留手动输入框作为备份
+        token = st.sidebar.text_input("Hugging Face Token", type="password")
+    
+    prompt = st.text_area("描述你的梦境 (支持中文)", placeholder="例如：深海中的少女，复古胶片感...")
     
     if st.button("开始梦境生成"):
-        if not token: st.warning("🔑 请在侧边栏输入 Token")
-        elif not prompt: st.warning("📝 请输入提示词")
+        if not token: 
+            st.warning("🔑 请在侧边栏输入 Token 或在后台设置 Secrets")
+        elif not prompt: 
+            st.warning("📝 请输入提示词")
         else:
             with st.spinner("🌊 妮情 AI 正在构思并自动转译..."):
                 en_prompt = translate_to_en(prompt)
                 if en_prompt != prompt:
-                    st.caption(f"🌐 翻译结果: {en_prompt}")
+                    st.caption(f"🌐 自动转译: {en_prompt}")
                 
                 result = query_ai_art(en_prompt, token)
                 
@@ -139,10 +148,10 @@ elif app_mode == "AI 文生图":
                         st.image(final, caption="妮情 AI 创意生成", use_container_width=True)
                         buf = io.BytesIO()
                         final.save(buf, format="JPEG")
-                        st.download_button("💾 保存这张 AI 作品", data=buf.getvalue(), file_name="NIQING_AI.jpg")
+                        st.download_button("💾 保存这张作品", data=buf.getvalue(), file_name="NIQING_AI.jpg")
                     except Exception as e: st.error(f"解析失败: {e}")
                 elif isinstance(result, dict):
                     if "estimated_time" in result:
-                        st.info(f"🕒 模型正在苏醒... 预计还需 {int(result['estimated_time'])} 秒")
+                        st.info(f"🕒 模型正在加载... 预计还需 {int(result['estimated_time'])} 秒")
                     else:
-                        st.error(f"❌ 提示: {result.get('error', '未知错误')}")
+                        st.error(f"❌ 错误: {result.get('error', '未知错误')}")
