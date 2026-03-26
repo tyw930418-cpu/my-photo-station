@@ -1,9 +1,8 @@
 import streamlit as st
 from PIL import Image, ImageOps, ImageEnhance, ImageDraw
-from rembg import remove
 import io, zipfile, requests, base64, time
 
-# --- 1. 视觉美化 ---
+# --- 1. 视觉美化 (深海蓝 + 椰沙棕) ---
 st.set_page_config(page_title="妮情 · 深海创意工坊", layout="wide")
 st.markdown("""
     <style>
@@ -18,101 +17,110 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. 核心函数 ---
-TEXT_MODEL = "https://router.huggingface.co/prompthero/openjourney"
-# 图生图使用 SD 1.5 兼容接口
-IMG2IMG_MODEL = "https://router.huggingface.co/runwayml/stable-diffusion-v1-5"
+# --- 2. 核心后端逻辑 ---
 
 def translate_to_en(text):
+    """翻译官：将妮情的中文创意转译为 AI 听得懂的英文"""
     url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&q={requests.utils.quote(text)}"
     try:
         r = requests.get(url, timeout=5)
         return r.json()[0][0][0]
     except: return text
 
-def query_ai(prompt, hf_token, is_img2img=False, init_image=None):
-    headers = {"Authorization": f"Bearer {hf_token}"}
-    url = IMG2IMG_MODEL if is_img2img else TEXT_MODEL
-    
-    if is_img2img and init_image:
-        buf = io.BytesIO()
-        init_image.save(buf, format="PNG")
-        img_str = base64.b64encode(buf.getvalue()).decode("utf-8")
-        payload = {"inputs": prompt, "image": img_str, "parameters": {"strength": 0.5}}
-        response = requests.post(url, headers=headers, json=payload, timeout=60)
-    else:
-        response = requests.post(url, headers=headers, json={"inputs": prompt}, timeout=60)
+def mj_api_call(prompt, api_key, image_url=None):
+    """
+    Midjourney 预埋逻辑：支持文生图和图生图
+    注：MJ 是异步的，这里预留了提交任务和查询进度的框架
+    """
+    # 模拟 Midjourney 的 API 交互
+    # 以后只需将此处更换为你的 MJ 中转服务商提供的 URL
+    submit_url = "https://your-mj-proxy.com/mj/submit/imagine" 
+    return {"task_id": "mock_task_123", "status": "SUCCESS"}
 
-    if response.status_code != 200:
-        try: return response.json()
-        except: return {"error": f"码: {response.status_code}"}
-    return response.content
-
-def process_image(img_obj, mode, add_border=True):
+def process_image(img_obj, mode="原色风格", add_border=True):
+    """图片后期处理：徕卡影调 + 妮情专属边框"""
     img = ImageOps.exif_transpose(img_obj)
     if mode == "徕卡黑白":
         img = ImageOps.grayscale(img.convert("RGB"))
         img = ImageEnhance.Contrast(img).enhance(1.4)
+    
     if add_border:
         w, h = img.size
         border_h = int(h * 0.20)
         new_img = Image.new("RGB", (w, h + border_h), (255, 255, 255))
         new_img.paste(img, (0, 0))
         draw = ImageDraw.Draw(new_img)
+        # 你的专属品牌标志
         draw.text((int(w*0.05), h + int(border_h*0.3)), "N I Q I N G   S T U D I O", fill=(0, 0, 0))
         img = new_img
     return img
 
-# --- 3. UI 主体 ---
+# --- 3. UI 逻辑主体 ---
 st.title("🏖️ 妮情 · 仲夏海边工坊 | NIQING")
-app_mode = st.sidebar.radio("请选择操作", ["影像后期", "AI 文生图", "AI 图生图", "AI 视频大师"])
+app_mode = st.sidebar.radio("创作维度", ["影像后期", "MJ 文生图", "MJ 图生图", "即梦视频大师"])
 
-try: 
-    token = st.secrets["HF_TOKEN"].strip()
+# 密钥管理 (从 Streamlit Secrets 自动读取)
+try:
+    mj_key = st.secrets.get("MJ_API_KEY", "").strip()
     volc_ak = st.secrets.get("VOLC_AK", "").strip()
     volc_sk = st.secrets.get("VOLC_SK", "").strip()
-except: 
-    token = ""
-    volc_ak, volc_sk = "", ""
+except:
+    mj_key, volc_ak, volc_sk = "", "", ""
 
-# --- 影像后期 ---
+# --- 影像后期模式 ---
 if app_mode == "影像后期":
+    st.subheader("📸 胶片质感后期")
+    mode = st.sidebar.selectbox("影调选择", ["原色风格", "徕卡黑白"])
     files = st.file_uploader("导入摄影素材", type=["jpg", "png"], accept_multiple_files=True)
     if files:
-        for f in files: st.image(process_image(Image.open(f), "原色风格"), use_container_width=True)
+        cols = st.columns(2)
+        for idx, f in enumerate(files):
+            processed = process_image(Image.open(f), mode)
+            with cols[idx % 2]:
+                st.image(processed, use_container_width=True)
 
-# --- AI 文生图 ---
-elif app_mode == "AI 文生图":
-    prompt = st.text_area("描述你的梦境")
-    if st.button("开始造梦"):
-        with st.spinner("🌊 正在生成..."):
-            res = query_ai(translate_to_en(prompt), token)
-            if isinstance(res, bytes):
-                st.image(process_image(Image.open(io.BytesIO(res)), "原色风格"))
-            else: st.error(f"提示: {res}")
+# --- MJ 文生图模式 ---
+elif app_mode == "MJ 文生图":
+    st.subheader("🎨 Midjourney 纯文字造梦")
+    prompt = st.text_area("描述你脑海中的画面 (支持中文)", placeholder="例如：夏日海滩边的复古少女，胶片感...")
+    if st.button("开始艺术创作"):
+        if not mj_key:
+            st.warning("🔑 请先配置 MJ_API_KEY")
+        else:
+            with st.status("🌊 Midjourney 正在排队并渲染...", expanded=True) as status:
+                en_prompt = translate_to_en(prompt)
+                st.write(f"🌐 转译指令: {en_prompt}")
+                # 模拟 MJ 渲染过程
+                for i in range(1, 11):
+                    time.sleep(1) 
+                    status.write(f"渲染进度: {i*10}%...")
+                st.info("地基已通！填入正式 MJ 接口即可出图。")
 
-# --- AI 图生图 (重磅回归！) ---
-elif app_mode == "AI 图生图":
-    ref_file = st.file_uploader("上传参考底图", type=["jpg", "png"])
-    prompt = st.text_area("输入重绘指令")
-    if st.button("魔法重绘"):
-        if ref_file and token:
-            with st.spinner("🎨 正在参考原图重绘..."):
-                init_img = Image.open(ref_file).convert("RGB").resize((512, 512))
-                res = query_ai(translate_to_en(prompt), token, is_img2img=True, init_image=init_img)
-                if isinstance(res, bytes):
-                    st.image(process_image(Image.open(io.BytesIO(res)), "原色风格"))
-                else: st.error(f"提示: {res}")
+# --- MJ 图生图模式 ---
+elif app_mode == "MJ 图生图":
+    st.subheader("🖼️ Midjourney 垫图重绘")
+    ref_file = st.file_uploader("上传一张参考底图", type=["jpg", "png"])
+    prompt = st.text_area("输入重绘指令", placeholder="例如：保持构图，改为梵高星空风格...")
+    if st.button("执行魔法重绘"):
+        if not ref_file or not mj_key:
+            st.error("请确保已上传图片并配置 Key")
+        else:
+            st.info("MJ 模式已预埋：正在将图片上传至临时图床并拼接 Prompt...")
+            st.spinner("正在重绘中...")
 
-# --- AI 视频大师 ---
-elif app_mode == "AI 视频大师":
-    st.subheader("🎥 即梦引擎 · 灵动时刻")
-    video_ref = st.file_uploader("上传起始帧图片", type=["jpg", "png"])
-    motion = st.text_area("描述动作方向")
-    if st.button("生成演示动画"):
-        progress_bar = st.progress(0)
-        for p in range(100):
-            time.sleep(0.05)
-            progress_bar.progress(p + 1)
-        st.info("地基已就绪！拿到火山引擎 Key 后即可激活真实视频渲染。")
-            # 这里的 st.video 会在未来播放真实生成的 .mp4
+# --- 即梦视频大师模式 ---
+elif app_mode == "即梦视频大师":
+    st.subheader("🎥 即梦引擎 · 动态瞬间")
+    video_ref = st.file_uploader("上传起始帧 (让这张图动起来)", type=["jpg", "png"])
+    motion = st.text_area("描述动态轨迹", placeholder="例如：镜头缓慢推近，海水泛起涟漪")
+    if st.button("生成 4 秒短片"):
+        if not volc_ak:
+            st.error("🔑 还没检测到火山引擎 Key！")
+        else:
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            for p in range(100):
+                time.sleep(0.08)
+                progress_bar.progress(p + 1)
+                status_text.text(f"🎬 即梦引擎正在渲染每一帧... {p+1}%")
+            st.success("✅ 视频渲染框架已就绪！")
