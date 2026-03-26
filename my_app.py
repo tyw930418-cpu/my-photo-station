@@ -121,7 +121,7 @@ elif app_mode == "AI 文生图":
     # ✨ 核心修改：Token 免输入逻辑
     try:
         # 尝试从 Secrets 读取
-        token = st.secrets["HF_TOKEN"]
+        token = st.secrets["HF_TOKEN"].strip()
     except:
         # 如果没设置，依然保留手动输入框作为备份
         token = st.sidebar.text_input("Hugging Face Token", type="password")
