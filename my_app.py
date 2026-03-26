@@ -134,25 +134,37 @@ if app_mode == "影像后期":
 # --- 模式 B：AI 文生图 ---
 elif app_mode == "AI 文生图":
     token = st.sidebar.text_input("Hugging Face Token", type="password")
-    prompt = st.text_area("描述你的梦境 (推荐英文)", placeholder="e.g. A portrait of a girl in sunset, cinematic lighting, 85mm lens")
+    prompt = st.text_area("输入你的梦境 (支持中文)", placeholder="例如：深海中的发光少女，电影感光影...")
     
     if st.button("开始梦境生成"):
-        if not token: st.warning("🔑 请在侧边栏输入 Token")
-        elif not prompt: st.warning("📝 请输入提示词")
+        if not token: 
+            st.warning("🔑 请在侧边栏输入 Token")
+        elif not prompt: 
+            st.warning("📝 请输入提示词")
         else:
-            with st.spinner("🕯️ 妮情 AI 正在构思..."):
-                result = query_ai_art(prompt, token)
+            with st.spinner("🌊 妮情 AI 正在跨越语言阻碍并构思..."):
+                # 🛠️ 关键一步：调用你定义的翻译官
+                en_prompt = translate_to_en(prompt)
+                
+                # 如果是中文翻译过来的，显示一下翻译结果，方便你学习关键词
+                if en_prompt != prompt:
+                    st.caption(f"🌐 自动翻译结果: {en_prompt}")
+                
+                # 注意：这里传给 query_ai_art 的必须是 en_prompt
+                result = query_ai_art(en_prompt, token)
                 
                 if isinstance(result, bytes):
                     try:
                         gen_img = Image.open(io.BytesIO(result))
+                        # 自动套用妮情专属边框
                         final = process_image(gen_img, "原色风格", add_border=True)
                         st.image(final, caption="妮情 AI 创意生成", use_container_width=True)
                         
                         buf = io.BytesIO()
                         final.save(buf, format="JPEG")
                         st.download_button("💾 保存这张 AI 作品", data=buf.getvalue(), file_name="NIQING_AI.jpg")
-                    except Exception as e: st.error(f"解析失败: {e}")
+                    except Exception as e: 
+                        st.error(f"解析失败: {e}")
                 
                 elif isinstance(result, dict):
                     if "estimated_time" in result:
