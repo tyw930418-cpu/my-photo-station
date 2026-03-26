@@ -67,22 +67,19 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. 核心：AI 请求函数 (保持不变，已为你优化路径) ---
+# --- 2. 核心：AI 请求函数 ---
 API_URL = "https://router.huggingface.co/prompthero/openjourney"
 
-def query_ai_art(prompt, hf_token):
-    headers = {"Authorization": f"Bearer {hf_token}"}
-    payload = {"inputs": prompt}
+# ✨ [在此处插入] 翻译官函数：把你的中文梦境翻译成 MJ 听得懂的英文
+def translate_to_en(text):
+    import requests
+    # 这是一个简单有效的谷歌翻译爬虫接口
+    url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&q={requests.utils.quote(text)}"
     try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
-        if response.status_code != 200:
-            try: return response.json()
-            except: return {"error": f"码: {response.status_code}"}
-        if not response.content: return {"error": "返回为空"}
-        if "image" in response.headers.get("Content-Type", ""): return response.content
-        else: return response.json()
-    except Exception as e: return {"error": str(e)}
-
+        r = requests.get(url, timeout=5)
+        return r.json()[0][0][0]
+    except:
+        return text # 如果网络波动，就返回原词
 # --- 3. 核心：图片处理函数 (保持不变) ---
 def process_image(img_obj, mode, add_border=True, ai_remove_bg=False):
     img = ImageOps.exif_transpose(img_obj)
